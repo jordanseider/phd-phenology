@@ -18,7 +18,8 @@ get_datetime <- function(image){
       c(as.character(0:9), "-", ":", " "), collapse = ""))) %>%
     gsub(pattern = "\n", replacement = "", x = .) %>% 
     gsub(pattern = "S", replacement = "5", x = .) %>% 
-    gsub(pattern = "—", replacement = "-", x = .) %>% 
+    gsub(pattern = "—", replacement = "-", x = .) %>%
+    
     as.POSIXct(format = "%Y-%m-%d %T")
   
   return(datetime)
@@ -27,7 +28,7 @@ get_datetime <- function(image){
 
 get_temperature <- function(image){
   
-  crop <- image_crop(image, "300x100+3300+2095") %>% 
+  crop <- image_crop(image, "145x100+3300+2095") %>% 
     image_negate() %>% 
     image_blur(1.5, 2) %>% 
     image_contrast()
@@ -37,7 +38,7 @@ get_temperature <- function(image){
     image_ocr(options = list(tessedit_char_whitelist = paste(c(0:9, "-"), collapse = ""))) %>% 
     gsub(pattern = "\n", replacement = "", x = .) %>% 
     gsub(pattern = "S", replacement = "5", x = .) %>% 
-    gsub(pattern = "—", replacement = "-", x = .)
+    gsub(pattern = "—", replacement = "-", x = .) 
   
   return(as.numeric(temp))
   
@@ -72,6 +73,7 @@ extract_metadata <- function(image_dir, recursive = TRUE){
         time = if(!is.na(dt)) format(dt, "%H:%M:%S") else NA_character_,
         temperature = tmp
       )},
+      
       error = function(e){
         tibble(
           file_path   = file_path,
@@ -80,6 +82,7 @@ extract_metadata <- function(image_dir, recursive = TRUE){
           time        = NA_character_,
           temperature = NA_real_
         )}
+      
       )}, .progress = TRUE)
   
   return(metadata_df)
