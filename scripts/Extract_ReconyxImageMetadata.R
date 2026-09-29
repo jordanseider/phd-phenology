@@ -3,44 +3,22 @@
 
 library(magick) # image processing
 library(tesseract) # extracts text from images
+library(exifr)
 library(tidyverse)
-
-get_datetime <- function(image){
-  
-  crop <- image_crop(image, "900x100+0+2095") %>% 
-    image_negate() %>% 
-    image_blur(1.5, 2) %>% 
-    image_contrast()
-  
-  datetime <- image_flatten(c(image_blank(width = 900, height = 100, color = "white"), 
-                              crop)) %>% 
-    image_ocr(options = list(tessedit_char_whitelist = paste(
-      c(as.character(0:9), "-", ":", " "), collapse = ""))) %>%
-    gsub(pattern = "\n", replacement = "", x = .) %>% 
-    gsub(pattern = "S", replacement = "5", x = .) %>% 
-    gsub(pattern = "—", replacement = "-", x = .) %>%
-    
-    as.POSIXct(format = "%Y-%m-%d %T")
-  
-  return(datetime)
-  
-}
 
 get_temperature <- function(image){
   
-  crop <- image_crop(image, "145x100+3300+2095") %>% 
-    image_negate() %>% 
-    image_blur(1.5, 2) %>% 
-    image_contrast()
-  
-  temp <- image_flatten(c(image_blank(width = 300, height = 100, color = "white"), 
-                          crop)) %>% 
-    image_ocr(options = list(tessedit_char_whitelist = paste(c(0:9, "-"), collapse = ""))) %>% 
-    gsub(pattern = "\n", replacement = "", x = .) %>% 
-    gsub(pattern = "S", replacement = "5", x = .) %>% 
-    gsub(pattern = "—", replacement = "-", x = .) 
-  
-  return(as.numeric(temp))
+  image %>% 
+    image_crop("145x100+3300+2096") %>% 
+    image_convert(colorspace = "gray") %>% 
+    image_negate() %>%
+    image_resize("250%") %>% 
+    image_border("white", "30x30") %>% 
+    image_ocr(options = list(
+      tessedit_char_whitelist = "0123456789-",
+      tessedit_pageseg_mode = 8)) %>% # treats crop as single word
+      gsub("[^0-9-]", "", .) %>% 
+    as.numeric()
   
 }
 
@@ -57,34 +35,38 @@ extract_metadata <- function(image_dir, recursive = TRUE){
     stop("No JPEG images found in the specified directory.")
   }
   
-  metadata_df <- map_dfr(image_files, 
-                         
-                         function(file_path){
-
+  dt_metadata <- read_exif(image_files, tags = "CreateDate") %>% 
+    transmute(
+      file_path = SourceFile,
+      image_name = basename(SourceFile),
+      dt_parsed = ymd_hms(as.character(CreateDate)),
+      date = if_else(!is.na(dt_parsed), format(dt_parsed, "%Y-%m-%d"), NA_character_),
+      time = if_else(!is.na(dt_parsed), format(dt_parsed, "%H:%M:%S"), NA_character_)
+    ) %>%
+    select(-dt_parsed)
+  
+  temp_metadata <- map_dfr(image_files, function(file_path){
     tryCatch({
       img <- image_read(file_path)
-      dt <- get_datetime(img)
       tmp <- get_temperature(img)
       
       tibble(
         file_path = file_path,
-        image_name = basename(file_path),
-        date = if(!is.na(dt)) format(dt, "%Y-%m-%d") else NA_character_,
-        time = if(!is.na(dt)) format(dt, "%H:%M:%S") else NA_character_,
         temperature = tmp
-      )},
-      
-      error = function(e){
-        tibble(
-          file_path   = file_path,
-          image_name  = basename(file_path),
-          date        = NA_character_,
-          time        = NA_character_,
-          temperature = NA_real_
-        )}
-      
-      )}, .progress = TRUE)
+      )
+    },
+    error = function(e){
+      tibble(
+        file_path = file_path,
+        temperature = NA_real_
+      )
+    })
+  }, .progress = TRUE)
+  
+  metadata_df <- left_join(dt_metadata, temp_metadata, by = "file_path")
   
   return(metadata_df)
 }
+
+data <- extract_metadata("C:/Users/jseider.stu/Desktop/trial/")
 
