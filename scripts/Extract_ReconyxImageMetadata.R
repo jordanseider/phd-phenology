@@ -9,15 +9,15 @@ library(tidyverse)
 get_temperature <- function(image){
   
   image %>% 
-    image_crop("145x100+3300+2096") %>% 
-    image_convert(colorspace = "gray") %>% 
-    image_negate() %>%
-    image_resize("250%") %>% 
-    image_border("white", "30x30") %>% 
+    image_crop("145x100+3300+2096") %>%         # Crop image to only the temperature
+    image_convert(colorspace = "gray") %>%      # Convert to grayscale
+    image_negate() %>%                          # Invert colours (black text on white background)
+    image_resize("250%") %>%                    # Enlarge image
+    image_border("white", "30x30") %>%          # Add a white border
     image_ocr(options = list(
-      tessedit_char_whitelist = "0123456789-",
-      tessedit_pageseg_mode = 8)) %>% # treats crop as single word
-      gsub("[^0-9-]", "", .) %>% 
+      tessedit_char_whitelist = "0123456789-",  # Only use these characters
+      tessedit_pageseg_mode = 8)) %>%           # treats crop as single word
+      gsub("[^0-9-]", "", .) %>%                # Replace any other characters with empty ""
     as.numeric()
   
 }
