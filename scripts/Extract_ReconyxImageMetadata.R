@@ -9,7 +9,7 @@ library(tidyverse)
 get_temperature <- function(image){
   
   image %>% 
-    image_crop("145x100+3300+2096") %>%         # Crop image to only the temperature
+    image_crop("145x100+3300+2096") %>%         # Crop image to only the temperature ("WidthxHeight+Xoffset+Yoffset")
     image_convert(colorspace = "gray") %>%      # Convert to grayscale
     image_negate() %>%                          # Invert colours (black text on white background)
     image_resize("250%") %>%                    # Enlarge image
