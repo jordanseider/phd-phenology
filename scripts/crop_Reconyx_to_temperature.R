@@ -1,6 +1,7 @@
 library(magick)
 library(exifr)
-library(tidyverse)
+library(dplyr)
+library(stringr)
 library(furrr)
 library(progressr)
 
