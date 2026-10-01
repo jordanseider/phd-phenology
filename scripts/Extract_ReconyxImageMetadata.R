@@ -1,72 +1,45 @@
-# Extract metadata from Reconyx images
-# Functions work with Reconyx Hyperfire 4K Professional cameras
-
-library(magick) # image processing
-library(tesseract) # extracts text from images
+library(magick)
+library(reticulate)
 library(exifr)
-library(tidyverse)
 
-get_temperature <- function(image){
+extract_metadata <- function(root_dir,
+                             crop ="145x100+3300+2095",
+                             pattern = "\\.JPG$",
+                             recursive = FALSE,
+                             chunk = 50) {
   
-  image %>% 
-    image_crop("145x100+3300+2096") %>%         # Crop image to only the temperature ("WidthxHeight+Xoffset+Yoffset")
-    image_convert(colorspace = "gray") %>%      # Convert to grayscale
-    image_negate() %>%                          # Invert colours (black text on white background)
-    image_resize("250%") %>%                    # Enlarge image
-    image_border("white", "30x30") %>%          # Add a white border
-    image_ocr(options = list(
-      tessedit_char_whitelist = "0123456789-",  # Only use these characters
-      tessedit_pageseg_mode = 8)) %>%           # treats crop as single word
-      gsub("[^0-9-]", "", .) %>%                # Replace any other characters with empty ""
-    as.numeric()
+  # Must be set before paddle is imported (restart R if Python is already loaded)
+  Sys.setenv(FLAGS_enable_pir_api = "0", FLAGS_use_mkldnn = "0")
+  py_require(c("paddleocr", "paddlepaddle"))
   
-}
-
-extract_metadata <- function(image_dir, recursive = TRUE){
+  files <- list.files(root_dir, 
+                      pattern, 
+                      recursive = TRUE, 
+                      full.names = TRUE, 
+                      ignore.case = TRUE)
+  exif <- read_exif(files, tags = "CreateDate")   # one row per file, so dates can't misalign
   
-  image_files <- list.files(
-    path = image_dir, 
-    pattern = "\\.(jpg|JPG)$", 
-    full.names = TRUE, 
-    recursive = recursive # will search all subdirectories within image_dir and compile all images into one output (does not distinguish between sites, except as reported filename)
-  )
+  rec <- import("paddleocr")$TextRecognition()   # load the model once
+  tmp <- tempfile(fileext = ".jpg")
+  on.exit(unlink(tmp))
   
-  if (length(image_files) == 0) {
-    stop("No JPEG images found in the specified directory.")
+  text <- character(length(files))
+  pb <- txtProgressBar(max = length(files), style = 3)
+  for (i in seq_along(files)) {
+    image_read(files[i]) %>% image_crop(crop) %>% image_write(tmp)
+    text[i] <- as.character(rec$predict(tmp)[[1]][["rec_text"]])[1]
+    setTxtProgressBar(pb, i)
   }
+  close(pb)
   
-  dt_metadata <- read_exif(image_files, tags = "CreateDate") %>% 
-    transmute(
-      file_path = SourceFile,
-      image_name = basename(SourceFile),
-      dt_parsed = ymd_hms(as.character(CreateDate)),
-      date = if_else(!is.na(dt_parsed), format(dt_parsed, "%Y-%m-%d"), NA_character_),
-      time = if_else(!is.na(dt_parsed), format(dt_parsed, "%H:%M:%S"), NA_character_)
-    ) %>%
-    select(-dt_parsed)
+  dt <- as.POSIXct(exif$CreateDate, format = "%Y:%m:%d %H:%M:%S")
   
-  temp_metadata <- map_dfr(image_files, function(file_path){
-    tryCatch({
-      img <- image_read(file_path)
-      tmp <- get_temperature(img)
-      
-      tibble(
-        file_path = file_path,
-        temperature = tmp
-      )
-    },
-    error = function(e){
-      tibble(
-        file_path = file_path,
-        temperature = NA_real_
-      )
-    })
-  }, .progress = TRUE)
-  
-  metadata_df <- left_join(dt_metadata, temp_metadata, by = "file_path")
-  
-  return(metadata_df)
-}
+  data.frame(
+    filepath     = exif$SourceFile,
+    date         = as.Date(dt),
+    time         = format(dt, "%H:%M:%S"),   # character, base R has no time-of-day class
+    temp_text_QC = text,   # raw OCR string, kept for QC
+    temp_c       = suppressWarnings(as.numeric(gsub("[^0-9-]", "", text)))
+    }
 
-data <- extract_metadata("C:/Users/jseider.stu/Desktop/trial/")
-
+df <- extract_metadata("C:/Users/jseider.stu/Desktop/trial")
