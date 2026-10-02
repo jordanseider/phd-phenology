@@ -41,5 +41,4 @@ extract_metadata <- function(root_dir,
     temp_text_QC = text,   # raw OCR string, kept for QC
     temp_c       = suppressWarnings(as.numeric(gsub("[^0-9-]", "", text)))
     }
-
-df <- extract_metadata("C:/Users/jseider.stu/Desktop/trial")
+}
