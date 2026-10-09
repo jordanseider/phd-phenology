@@ -40,5 +40,5 @@ extract_metadata <- function(root_dir,
     time         = format(dt, "%H:%M:%S"),   # character, base R has no time-of-day class
     temp_text_QC = text,   # raw OCR string, kept for QC
     temp_c       = suppressWarnings(as.numeric(gsub("[^0-9-]", "", text)))
-    }
+  )
 }
