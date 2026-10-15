@@ -24,6 +24,20 @@ draw_key_short_vline <- function(data, params, size) {
   )
 }
 
+# Custom key glyph for 50% Green (mid-length vertical line: y 0.18 to 0.82)
+draw_key_mid_vline <- function(data, params, size) {
+  grid::segmentsGrob(
+    x0 = 0.5, y0 = 0.28,
+    x1 = 0.5, y1 = 0.72,
+    gp = grid::gpar(
+      col = data$colour %||% "black",
+      lwd = (data$linewidth %||% 1) * .pt,
+      lty = data$linetype %||% 1,
+      lineend = "butt"
+    )
+  )
+}
+
 # Custom key glyph for Peak Greenness (taller vertical line)
 draw_key_tall_vline <- function(data, params, size) {
   grid::segmentsGrob(
@@ -50,6 +64,7 @@ df_plot <- df %>%
     snow_10_date      = ymd(First.Ground.Appearance),
     snow_50_date      = ymd(X50..Snow.Free),
     snow_90_date      = ymd(X.90..Snow.Free..Least.Snow.),
+    green_50_date     = ymd(X50..Green.Leaves),
     green_100_date    = ymd(X100..Green),
     peak_green_date   = ymd(Peak.Greenness),
     camera_death_date = ymd(Camera.Death),
@@ -101,7 +116,7 @@ axis_faces  <- if_else(axis_formatting$missing_50, "italic", "plain")
 # -----------------------------------------------------------------------------
 # Smooth Polygon Slices for Greenness Transition Bar (Sloped Trapezia)
 # -----------------------------------------------------------------------------
-n_slices <- 150
+n_slices <- 250
 
 df_green_bar <- df_plot %>%
   filter(!is.na(green_100_date) & !is.na(peak_green_date) & green_100_date <= peak_green_date) %>%
@@ -206,7 +221,21 @@ p_absolute <- ggplot(df_plot, aes(y = Site_name_display)) +
     na.rm = TRUE
   ) +
   
-  # 5. Small vertical line tick for 100% Green
+  # 5. Mid-height vertical line tick for 50% Green (height ±0.20)
+  geom_segment(
+    aes(
+      x = green_50_date,
+      xend = green_50_date,
+      y = as.numeric(Site_name_display) - 0.15,
+      yend = as.numeric(Site_name_display) + 0.15,
+      color = "50% Green"
+    ),
+    linewidth = 1.2,
+    key_glyph = draw_key_mid_vline,
+    na.rm = TRUE
+  ) +
+  
+  # 6. Small vertical line tick for 100% Green
   geom_segment(
     aes(
       x = green_100_date,
@@ -220,7 +249,7 @@ p_absolute <- ggplot(df_plot, aes(y = Site_name_display)) +
     na.rm = TRUE
   ) +
   
-  # 6. Small vertical line tick for Peak Greenness
+  # 7. Small vertical line tick for Peak Greenness
   geom_segment(
     aes(
       x = peak_green_date,
@@ -237,12 +266,14 @@ p_absolute <- ggplot(df_plot, aes(y = Site_name_display)) +
     values = c(
       "First Caribou Sighting" = "#D95F02",
       "Camera Death"           = "darkred",
+      "50% Green"              = "#BCE29E",
       "100% Green"             = "#7CCC85",
       "Peak Greenness"         = "#0A3610"
     ),
     breaks = c(
       "First Caribou Sighting",
       "Camera Death",
+      "50% Green",
       "100% Green",
       "Peak Greenness"
     ),
