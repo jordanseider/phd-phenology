@@ -3,8 +3,10 @@ library(tidyverse)
 library(grid)
 library(scales)
 
-tomst_dir <- "C:/Users/jseider.stu/Sync/Data/_FieldData/2026FieldData/TomstDataRAW"
-#tomst_dir <- "/Users/jordanseider/Library/CloudStorage/Sync/Data/_FieldData/2026FieldData/TomstDataRAW"
+setwd("C:/Users/jseider.stu")
+#setwd("/Users/jordanseider/Library/CloudStorage")
+
+tomst_dir <- "./Sync/Data/_FieldData/2026FieldData/TomstDataRAW"
 
 # Create list of all TOMST loggers' csv data files
 data.list <- list.files(path = tomst_dir,
@@ -43,7 +45,7 @@ data.all <- data.frame(); for (file in data.list) {
 data_1400 <- data.all %>%
   filter(str_detect(datetime_YST, " 14:00:00$"))
 
-fr_cam <- read.csv("/Users/jordanseider/Library/CloudStorage/Sync/Data/Phenology/CaribouCam_Temperatures/FirthRiver_temps.csv") %>%
+fr_cam <- read.csv("./Sync/Data/Phenology/CaribouCam_Temperatures/FirthRiver_temps.csv") %>%
   mutate(date = as.POSIXct(date, tz = "America/Whitehorse"))
 
 fr_1400 <- data_1400 %>% 
