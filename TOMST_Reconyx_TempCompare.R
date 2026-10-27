@@ -3,8 +3,8 @@ library(tidyverse)
 library(grid)
 library(scales)
 
-#tomst_dir <- "C:/Users/jseider.stu/Sync/Data/Phenology/QHI_TOMST_Data_2025"
-tomst_dir <- "/Users/jordanseider/Library/CloudStorage/Sync/Data/_FieldData/2026FieldData/TomstDataRAW"
+tomst_dir <- "C:/Users/jseider.stu/Sync/Data/_FieldData/2026FieldData/TomstDataRAW"
+#tomst_dir <- "/Users/jordanseider/Library/CloudStorage/Sync/Data/_FieldData/2026FieldData/TomstDataRAW"
 
 # Create list of all TOMST loggers' csv data files
 data.list <- list.files(path = tomst_dir,
