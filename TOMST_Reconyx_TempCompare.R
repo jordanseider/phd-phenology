@@ -54,7 +54,7 @@ fr_1400 <- data_1400 %>%
   select(site_id, datetime_YST, temp_air, temp_c) %>%
   na.omit()
 
-plot(temp_c ~ temp_air, data = fr_1400)
+plot(temp_c ~ temp_air, data = fr_1400, main = "FIRTH-RIVER", xlab = "TOMST Air Temperature", ylab = "Reconyx Temperature")
 
 fr_lm <- lm(temp_c ~ temp_air, data = fr_1400)
 
