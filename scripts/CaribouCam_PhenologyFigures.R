@@ -94,8 +94,8 @@ df_plot <- df %>%
       TRUE                          ~ Site_name
     ),
     
-    # Reorder sites by Latitude while keeping all sites on the axis
-    Site_name_display = fct_reorder(as.factor(Site_name_display), Latitude)
+    # Reorder sites by Longitude (west to east) while keeping all sites on the axis
+    Site_name_display = fct_reorder(as.factor(Site_name_display), -Longitude)
   )
 
 # -----------------------------------------------------------------------------
@@ -291,7 +291,7 @@ p_absolute <- ggplot(df_plot, aes(y = Site_name_display)) +
     x = "Date",
     y = "Site",
     title = "First Spring Caribou Sighting and Vegetation Phenology (Absolute Dates)",
-    subtitle = "Shaded bar spans First Ground Appearance to 90% Snow Free; Ticks show 100% Green and Peak Greenness; Red X shows Camera Death",
+    subtitle = "Shaded bar spans First Ground Appearance to 90% Snow Free; Ticks show 100% Green and Peak Greenness; Red X shows Camera Death\nCameras ordered from West to East.",
     caption = "* Windswept Ridge\n** Partial snowmelt data (missing 90% snow-free date)\nRed italicized site names indicate missing more data."
   ) +
   theme_minimal() +
