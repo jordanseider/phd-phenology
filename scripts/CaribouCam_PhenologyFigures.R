@@ -53,7 +53,8 @@ draw_key_tall_vline <- function(data, params, size) {
 }
 
 # Load data directly from local file
-df <- read.csv("C:/Users/jseider.stu/Desktop/phenology.csv")
+df <- read.csv("C:/Users/jseider.stu/Desktop/Phenocam Data Processing Sheet - Observer_JHS.csv", skip = 1) %>% 
+  filter(Project == "CaribouCam")
 
 # -----------------------------------------------------------------------------
 # Data Preparation
@@ -77,25 +78,45 @@ df_plot <- df %>%
     ),
     
     # Offsets relative to 50% snowmelt
-    caribou_rel      = as.numeric(caribou_date - snow_50_date),
-    snow_10_rel      = as.numeric(snow_10_date - snow_50_date),
-    snow_90_rel      = as.numeric(snow_90_date - snow_50_date),
+    caribou_rel       = as.numeric(caribou_date - snow_50_date),
+    snow_10_rel       = as.numeric(snow_10_date - snow_50_date),
+    snow_90_rel       = as.numeric(snow_90_date - snow_50_date),
     
-    # Categorize snowmelt bar type for legend mapping
-    snow_bar_type = if_else(!is.na(caribou_rel) | !is.na(caribou_date), "Caribou Present", "No Caribou Sighted"),
+    # Categorize snowmelt bar type for legend mapping (constant value so all bars map to "Snowmelt Window")
+    snow_bar_type = "Snowmelt Window",
     
     # Flag sites with partial snowmelt records (has start date but missing 90% snow-free date)
     missing_snow_end = !is.na(snow_10_date) & is.na(snow_90_date),
     
-    # Append custom notes dynamically to site names
-    Site_name_display = case_when(
-      Site_name == "Mount Conybeare" ~ "Mount Conybeare*",
-      missing_snow_end              ~ paste0(Site_name, "**"),
-      TRUE                          ~ Site_name
+    # Enforce manual site ordering (reversed) on the base site factor
+    Site_name = factor(
+      Site_name,
+      levels = c(
+        "Stokes Point",
+        "Spring River North",
+        "Roland Creek",
+        "Whale Lowland",
+        "Spring River South",
+        "Firth River",
+        "Tulagak River",
+        "Loney Creek",
+        "Malcolm North",
+        "Mount Conybeare",
+        "Komakuk Foothills",
+        "Malcolm South",
+        "Malcolm Alpine",
+        "Backhouse Foothills",
+        "Backhouse Valley"
+      )
     ),
     
-    # Reorder sites by Longitude (west to east) while keeping all sites on the axis
-    Site_name_display = fct_reorder(as.factor(Site_name_display), -Longitude)
+    # Append custom notes dynamically to site names while preserving base factor order
+    Site_name_display = case_when(
+      as.character(Site_name) == "Mount Conybeare" ~ "Mount Conybeare*",
+      missing_snow_end                          ~ paste0(as.character(Site_name), "**"),
+      TRUE                                      ~ as.character(Site_name)
+    ),
+    Site_name_display = fct_reorder(Site_name_display, as.numeric(Site_name))
   )
 
 # -----------------------------------------------------------------------------
@@ -147,7 +168,7 @@ df_green_bar <- df_plot %>%
 # Chart 1: Absolute Date Plot
 # -----------------------------------------------------------------------------
 p_absolute <- ggplot(df_plot, aes(y = Site_name_display)) +
-  # 1a. Translucent snowmelt duration bars (coalesces missing xend to x to render partial data)
+  # Translucent snowmelt duration bars (coalesces missing xend to x to render partial data)
   geom_segment(
     aes(
       x = snow_10_date, 
@@ -160,24 +181,13 @@ p_absolute <- ggplot(df_plot, aes(y = Site_name_display)) +
     alpha = 0.45,
     na.rm = TRUE
   ) +
-  
-  # 1b. Vertical tick for First Ground Appearance (snow_10_date) ensuring single-point snowmelt renders
-  geom_point(
-    aes(
-      x = snow_10_date,
-      color = snow_bar_type
-    ),
-    shape = 124,
-    size = 5,
-    na.rm = TRUE
-  ) +
   scale_color_manual(
-    values = c("Caribou Present" = "skyblue3", "No Caribou Sighted" = "gray80"),
+    values = c("Snowmelt Window" = "skyblue3"),
     name = "Snowmelt Window (10%-90%)",
     guide = guide_legend(order = 1)
   ) +
   
-  # 2. Translucent sloped polygon gradient between 100% Green and Peak Greenness
+  # Translucent sloped polygon gradient between 100% Green and Peak Greenness
   geom_polygon(
     data = df_green_bar,
     aes(
@@ -198,7 +208,7 @@ p_absolute <- ggplot(df_plot, aes(y = Site_name_display)) +
   # Reset color scale for point, tick, and death markers
   new_scale_color() +
   
-  # 3. Point for first caribou sighting on absolute date
+  # Point for first caribou sighting on absolute date
   geom_point(
     aes(
       x = caribou_date, 
@@ -209,7 +219,7 @@ p_absolute <- ggplot(df_plot, aes(y = Site_name_display)) +
     na.rm = TRUE
   ) +
   
-  # 4. Dark red X for Camera Death date (rendered only if March 1, 2026 or later)
+  # Dark red X for Camera Death date (rendered only if March 1, 2026 or later)
   geom_point(
     aes(
       x = camera_death_plot,
@@ -221,7 +231,7 @@ p_absolute <- ggplot(df_plot, aes(y = Site_name_display)) +
     na.rm = TRUE
   ) +
   
-  # 5. Mid-height vertical line tick for 50% Green (height ±0.20)
+  # Mid-height vertical line tick for 50% Green (height ±0.20)
   geom_segment(
     aes(
       x = green_50_date,
@@ -235,7 +245,7 @@ p_absolute <- ggplot(df_plot, aes(y = Site_name_display)) +
     na.rm = TRUE
   ) +
   
-  # 6. Small vertical line tick for 100% Green
+  # Small vertical line tick for 100% Green
   geom_segment(
     aes(
       x = green_100_date,
@@ -249,7 +259,7 @@ p_absolute <- ggplot(df_plot, aes(y = Site_name_display)) +
     na.rm = TRUE
   ) +
   
-  # 7. Small vertical line tick for Peak Greenness
+  # Small vertical line tick for Peak Greenness
   geom_segment(
     aes(
       x = peak_green_date,
@@ -291,7 +301,7 @@ p_absolute <- ggplot(df_plot, aes(y = Site_name_display)) +
     x = "Date",
     y = "Site",
     title = "First Spring Caribou Sighting and Vegetation Phenology (Absolute Dates)",
-    subtitle = "Shaded bar spans First Ground Appearance to 90% Snow Free; Ticks show 100% Green and Peak Greenness; Red X shows Camera Death\nCameras ordered from West to East.",
+    subtitle = "Shaded bar spans First Ground Appearance to 90% Snow Free; Ticks show 100% Green and Peak Greenness; Red X shows Camera Death",
     caption = "* Windswept Ridge\n** Partial snowmelt data (missing 90% snow-free date)\nRed italicized site names indicate missing more data."
   ) +
   theme_minimal() +
@@ -309,7 +319,7 @@ print(p_absolute)
 # Chart 2: Relative Days Plot (Standard Relative View)
 # -----------------------------------------------------------------------------
 p_relative <- ggplot(df_plot, aes(y = Site_name_display)) +
-  # 1a. Translucent snowmelt duration bars (supports single point fallback via coalesce)
+  # Translucent snowmelt duration bars (supports single point fallback via coalesce)
   geom_segment(
     aes(
       x = snow_10_rel, 
@@ -322,19 +332,8 @@ p_relative <- ggplot(df_plot, aes(y = Site_name_display)) +
     alpha = 0.45,
     na.rm = TRUE
   ) +
-  
-  # 1b. Vertical tick for First Ground Appearance in relative view
-  geom_point(
-    aes(
-      x = snow_10_rel,
-      color = snow_bar_type
-    ),
-    shape = 124,
-    size = 5,
-    na.rm = TRUE
-  ) +
   scale_color_manual(
-    values = c("Caribou Present" = "skyblue3", "No Caribou Sighted" = "gray80"),
+    values = c("Snowmelt Window" = "skyblue3"),
     name = "Snowmelt Window (10%-90%)",
     guide = guide_legend(order = 1)
   ) +
@@ -342,10 +341,10 @@ p_relative <- ggplot(df_plot, aes(y = Site_name_display)) +
   # Reset color scale for event indicators
   new_scale_color() +
   
-  # 2. Vertical reference line at 0 (50% Snow Free Date)
+  # Vertical reference line at 0 (50% Snow Free Date)
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray30", linewidth = 0.8) +
   
-  # 3. Line linking 50% snow free (0) to first caribou sighting
+  # Line linking 50% snow free (0) to first caribou sighting
   geom_segment(
     aes(
       x = 0, 
@@ -358,7 +357,7 @@ p_relative <- ggplot(df_plot, aes(y = Site_name_display)) +
     na.rm = TRUE
   ) +
   
-  # 4. Point for first caribou sighting
+  # Point for first caribou sighting
   geom_point(
     aes(
       x = caribou_rel, 
