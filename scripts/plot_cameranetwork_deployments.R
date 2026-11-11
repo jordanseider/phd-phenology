@@ -1,8 +1,9 @@
 library(tidyverse)
 library(lubridate)
+library(readxl)
 
 # Load your data (replace with your actual file path/name)
-df <- read_csv("C:/Users/jseider.stu/Desktop/PhenologyCameraLocations.csv")
+df <- read_csv("C:/Users/jseider.stu/Sync/Data/Cameras_Partners/PhenologyCameraLocations.csv")[1:17, ]
 
 df %>%
   arrange(Project, Site) %>%
@@ -31,6 +32,7 @@ df %>%
   ) +
   theme_minimal() +
   theme(
+    axis.text.y = element_text(size = 4),
     panel.grid.minor.x = element_blank(),
     panel.grid.major.y = element_line(linetype = "dotted", color = "gray80")
   )
